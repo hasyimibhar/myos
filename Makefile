@@ -1,19 +1,22 @@
-start: os-image
+all: os-image
+
+run: all
 	qemu-system-x86_64 --curses os-image
 
 os-image: boot_sect.bin kernel.bin
-	cat boot_sect.bin kernel.bin > os-image
+	cat $^ > os-image
 
-boot_sect.bin:
-	nasm -f bin boot_sect.asm -o boot_sect.bin
+kernel.bin: kernel_entry.o kernel.o
+	ld -o $@ -Ttext 0x1000 $^ --oformat binary
 
-kernel.bin: kernel.o
-	ld -o kernel.bin -Ttext 0x1000 --oformat binary kernel.o
+kernel.o: kernel.c
+	gcc -ffreestanding -c $< -o $@
 
-kernel.o:
-	gcc -ffreestanding -c kernel.c -o kernel.o
+kernel_entry.o: kernel_entry.asm
+	nasm $< -f elf64 -o $@
+
+boot_sect.bin: boot_sect.asm
+	nasm $< -f bin -o $@
 
 clean:
-	rm -f *.o
-	rm -f *.bin
-	rm -f os-image
+	rm -f *.o *.bin os-image
